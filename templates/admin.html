@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+{% block content %}
+  <div class="row">
+    <div class="col-12">
+      <div class="card">
+        <div class="card-body">
+          <h1 class="h4 mb-4 text-primary">لوحة الطلبات</h1>
+          {% if orders|length == 0 %}
+            <div class="alert alert-info">لا توجد طلبات بعد.</div>
+          {% else %}
+          <div class="table-responsive">
+            <table class="table align-middle">
+              <thead class="table-light">
+                <tr>
+                  <th>#</th>
+                  <th>الهوية</th>
+                  <th>الاسم واللقب</th>
+                  <th>الهاتف</th>
+                  <th>العنوان</th>
+                  <th>المستلزم</th>
+                  <th>الحالة</th>
+                  <th>الرد</th>
+                  <th>إجراء</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for o in orders %}
+                <tr>
+                  <td>{{ o.id }}</td>
+                  <td>{{ o.id_card }}</td>
+                  <td>{{ o.first_name }} {{ o.last_name }}</td>
+                  <td>{{ o.phone }}</td>
+                  <td>{{ o.address }}</td>
+                  <td>{{ o.item }}</td>
+                  <td>
+                    <form class="d-flex gap-2" method="post" action="{{ url_for('respond', order_id=o.id) }}">
+                      <select class="form-select" name="status">
+                        <option value="جديد" {% if o.status == 'جديد' %}selected{% endif %}>جديد</option>
+                        <option value="قيد المعالجة" {% if o.status == 'قيد المعالجة' %}selected{% endif %}>قيد المعالجة</option>
+                        <option value="تم الرد" {% if o.status == 'تم الرد' %}selected{% endif %}>تم الرد</option>
+                        <option value="مكتمل" {% if o.status == 'مكتمل' %}selected{% endif %}>مكتمل</option>
+                      </select>
+                  </td>
+                  <td style="min-width: 220px;">
+                      <input type="text" class="form-control" name="response" placeholder="أدخل ردًا" value="{{ o.response or '' }}">
+                  </td>
+                  <td>
+                      <button class="btn btn-primary">حفظ</button>
+                    </form>
+                  </td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+{% endblock %}

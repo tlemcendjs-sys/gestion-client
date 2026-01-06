@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+{% block content %}
+  <div class="row justify-content-center">
+    <div class="col-lg-8">
+      <div class="card">
+        <div class="card-body">
+          <h1 class="h4 mb-4 text-primary">طلب شراء مستلزمات</h1>
+          {% if success %}
+            <div class="alert alert-success">تم إرسال طلبك بنجاح، سنقوم بالتواصل معك قريبًا.</div>
+          {% endif %}
+          <form method="post" novalidate>
+            <div class="row g-3">
+              <div class="col-md-6">
+                <label class="form-label">رقم بطاقة التعريف</label>
+                <input type="text" class="form-control" name="id_card" required>
+              </div>
+              <div class="col-md-6">
+                <label class="form-label">رقم الهاتف</label>
+                <input type="text" class="form-control" name="phone" required>
+              </div>
+              <div class="col-md-6">
+                <label class="form-label">الاسم</label>
+                <input type="text" class="form-control" name="first_name" required>
+              </div>
+              <div class="col-md-6">
+                <label class="form-label">اللقب</label>
+                <input type="text" class="form-control" name="last_name" required>
+              </div>
+              <div class="col-12">
+                <label class="form-label">العنوان</label>
+                <input type="text" class="form-control" name="address" required>
+              </div>
+              <div class="col-12">
+                <label class="form-label">المستلزم المراد شراءه</label>
+                <input type="text" class="form-control" name="item" required>
+              </div>
+            </div>
+            <div class="mt-4 d-flex justify-content-between">
+              <button type="submit" class="btn btn-primary px-4">إرسال الطلب</button>
+              <a href="{{ url_for('admin') }}" class="btn btn-outline-secondary">لوحة صاحب المحل</a>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+{% endblock %}
