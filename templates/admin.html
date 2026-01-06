@@ -1,61 +1,71 @@
-{% extends "base.html" %}
-{% block content %}
-  <div class="row">
-    <div class="col-12">
-      <div class="card">
-        <div class="card-body">
-          <h1 class="h4 mb-4 text-primary">لوحة الطلبات</h1>
-          {% if orders|length == 0 %}
-            <div class="alert alert-info">لا توجد طلبات بعد.</div>
-          {% else %}
-          <div class="table-responsive">
-            <table class="table align-middle">
-              <thead class="table-light">
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>لوحة الإدارة</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body { background-color: #f0f2f5; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        .admin-container { padding: 30px; }
+        .table-card { border-radius: 10px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.1); background: white; }
+    </style>
+</head>
+<body>
+
+<nav class="navbar navbar-dark bg-dark mb-4">
+    <div class="container-fluid">
+        <span class="navbar-brand mb-0 h1">لوحة إدارة الطلبات</span>
+        <a href="{{ url_for('index') }}" class="btn btn-outline-light btn-sm">العودة للرئيسية</a>
+    </div>
+</nav>
+
+<div class="container-fluid admin-container">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h4>قائمة الطلبات الواردة</h4>
+        <button onclick="location.reload()" class="btn btn-primary">تحديث القائمة</button>
+    </div>
+
+    <div class="table-card">
+        <table class="table table-striped table-hover mb-0">
+            <thead class="table-dark">
                 <tr>
-                  <th>#</th>
-                  <th>الهوية</th>
-                  <th>الاسم واللقب</th>
-                  <th>الهاتف</th>
-                  <th>العنوان</th>
-                  <th>المستلزم</th>
-                  <th>الحالة</th>
-                  <th>الرد</th>
-                  <th>إجراء</th>
+                    <th>#</th>
+                    <th>الاسم واللقب</th>
+                    <th>رقم البطاقة</th>
+                    <th>رقم الهاتف</th>
+                    <th>نوع الطلبية</th>
+                    <th>وقت الطلب</th>
                 </tr>
-              </thead>
-              <tbody>
-                {% for o in orders %}
+            </thead>
+            <tbody>
+                {% for order in orders %}
                 <tr>
-                  <td>{{ o.id }}</td>
-                  <td>{{ o.id_card }}</td>
-                  <td>{{ o.first_name }} {{ o.last_name }}</td>
-                  <td>{{ o.phone }}</td>
-                  <td>{{ o.address }}</td>
-                  <td>{{ o.item }}</td>
-                  <td>
-                    <form class="d-flex gap-2" method="post" action="{{ url_for('respond', order_id=o.id) }}">
-                      <select class="form-select" name="status">
-                        <option value="جديد" {% if o.status == 'جديد' %}selected{% endif %}>جديد</option>
-                        <option value="قيد المعالجة" {% if o.status == 'قيد المعالجة' %}selected{% endif %}>قيد المعالجة</option>
-                        <option value="تم الرد" {% if o.status == 'تم الرد' %}selected{% endif %}>تم الرد</option>
-                        <option value="مكتمل" {% if o.status == 'مكتمل' %}selected{% endif %}>مكتمل</option>
-                      </select>
-                  </td>
-                  <td style="min-width: 220px;">
-                      <input type="text" class="form-control" name="response" placeholder="أدخل ردًا" value="{{ o.response or '' }}">
-                  </td>
-                  <td>
-                      <button class="btn btn-primary">حفظ</button>
-                    </form>
-                  </td>
+                    <td>{{ order[0] }}</td>
+                    <td>{{ order[1] }} {{ order[2] }}</td>
+                    <td>{{ order[3] }}</td>
+                    <td><a href="tel:{{ order[4] }}" class="text-decoration-none">{{ order[4] }}</a></td>
+                    <td>
+                        <span class="badge bg-info text-dark">{{ order[5] }}</span>
+                    </td>
+                    <td dir="ltr" class="text-end">{{ order[6] }}</td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="6" class="text-center p-4 text-muted">لا توجد طلبات حالياً</td>
                 </tr>
                 {% endfor %}
-              </tbody>
-            </table>
-          </div>
-          {% endif %}
-        </div>
-      </div>
+            </tbody>
+        </table>
     </div>
-  </div>
-{% endblock %}
+</div>
+
+<script>
+    // تحديث تلقائي كل 30 ثانية
+    setInterval(function() {
+        location.reload();
+    }, 30000);
+</script>
+
+</body>
+</html>

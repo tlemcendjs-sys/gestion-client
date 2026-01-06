@@ -1,84 +1,110 @@
-from flask import Flask, render_template, request, redirect, url_for
+from flask import Flask, render_template, request, redirect, url_for, jsonify, session
 import sqlite3
-from datetime import datetime
+import datetime
 import os
 
 app = Flask(__name__)
-DB_PATH = os.getenv("DB_PATH", "orders.db")
+DB_NAME = "orders.db"
+app.secret_key = os.environ.get("APP_SECRET_KEY", "dev-key")
 
-def get_conn():
-    conn = sqlite3.connect(DB_PATH)
-    conn.row_factory = sqlite3.Row
-    return conn
-
+# تهيئة قاعدة البيانات
 def init_db():
-    conn = get_conn()
-    conn.execute(
-        """
-        CREATE TABLE IF NOT EXISTS orders (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            id_card TEXT NOT NULL,
-            first_name TEXT NOT NULL,
-            last_name TEXT NOT NULL,
-            phone TEXT NOT NULL,
-            address TEXT NOT NULL,
-            item TEXT NOT NULL,
-            status TEXT NOT NULL DEFAULT 'جديد',
-            response TEXT,
-            created_at TEXT NOT NULL
-        )
-        """
-    )
+    conn = sqlite3.connect(DB_NAME)
+    c = conn.cursor()
+    c.execute('''CREATE TABLE IF NOT EXISTS orders
+                 (id INTEGER PRIMARY KEY AUTOINCREMENT,
+                  first_name TEXT,
+                  last_name TEXT,
+                  card_id TEXT,
+                  phone TEXT,
+                  order_type TEXT,
+                  timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+                  is_read INTEGER DEFAULT 0)''')
     conn.commit()
     conn.close()
 
-with app.app_context():
-    init_db()
+# محاكاة إرسال رسالة نصية
+def send_sms_notification(name, phone):
+    # في الواقع، هنا نستخدم API مثل Twilio
+    # مثال: client.messages.create(to=owner_phone, from_=twilio_number, body=...)
+    print(f"\n[SMS SENT] تنبيه لمدير المحل: طلبية جديدة من {name} (هاتف: {phone})")
 
-@app.route("/", methods=["GET", "POST"])
+@app.route('/')
 def index():
-    success = False
-    if request.method == "POST":
-        id_card = request.form.get("id_card", "").strip()
-        first_name = request.form.get("first_name", "").strip()
-        last_name = request.form.get("last_name", "").strip()
-        phone = request.form.get("phone", "").strip()
-        address = request.form.get("address", "").strip()
-        item = request.form.get("item", "").strip()
-        if all([id_card, first_name, last_name, phone, address, item]):
-            conn = get_conn()
-            conn.execute(
-                "INSERT INTO orders (id_card, first_name, last_name, phone, address, item, status, response, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
-                (id_card, first_name, last_name, phone, address, item, "جديد", None, datetime.now().isoformat(timespec="seconds")),
-            )
-            conn.commit()
-            conn.close()
-            success = True
-        else:
-            success = False
-    return render_template("index.html", success=success)
+    return render_template('index.html')
 
-@app.route("/admin", methods=["GET"])
+@app.route('/submit', methods=['POST'])
+def submit_order():
+    if request.method == 'POST':
+        first_name = request.form['first_name']
+        last_name = request.form['last_name']
+        card_id = request.form['card_id']
+        phone = request.form['phone']
+        order_type = request.form['order_type']
+
+        conn = sqlite3.connect(DB_NAME)
+        c = conn.cursor()
+        c.execute("INSERT INTO orders (first_name, last_name, card_id, phone, order_type) VALUES (?, ?, ?, ?, ?)",
+                  (first_name, last_name, card_id, phone, order_type))
+        conn.commit()
+        conn.close()
+
+        # إرسال التنبيه
+        send_sms_notification(f"{first_name} {last_name}", phone)
+
+        return redirect(url_for('index', success=1))
+
+@app.route('/admin')
 def admin():
-    conn = get_conn()
-    cur = conn.execute("SELECT * FROM orders ORDER BY created_at DESC")
-    orders = cur.fetchall()
+    if not session.get("admin"):
+        return redirect(url_for("admin_login"))
+    conn = sqlite3.connect(DB_NAME)
+    c = conn.cursor()
+    # جلب الطلبات الأحدث أولاً
+    c.execute("SELECT * FROM orders ORDER BY timestamp DESC")
+    orders = c.fetchall()
     conn.close()
-    return render_template("admin.html", orders=orders)
+    return render_template('admin.html', orders=orders)
 
-@app.route("/respond/<int:order_id>", methods=["POST"])
-def respond(order_id):
-    status = request.form.get("status", "قيد المعالجة")
-    response = request.form.get("response", "").strip()
-    conn = get_conn()
-    conn.execute("UPDATE orders SET status = ?, response = ? WHERE id = ?", (status, response, order_id))
+@app.route('/admin_login', methods=['GET', 'POST'])
+@app.route('/admin-login', methods=['GET', 'POST'])
+def admin_login():
+    if request.method == 'POST':
+        pwd = request.form.get('password', '')
+        expected = os.environ.get('ADMIN_PASSWORD', '198619')
+        if pwd == expected:
+            session['admin'] = True
+            return redirect(url_for('admin'))
+        return render_template('login.html', error="كلمة المرور غير صحيحة")
+    return render_template('login.html', error=None)
+
+@app.route('/logout')
+def logout():
+    session.pop('admin', None)
+    return redirect(url_for('index'))
+
+@app.route('/api/check_new', methods=['GET'])
+def check_new():
+    # هذه الدالة يمكن استخدامها للتحقق من وجود طلبات جديدة غير مقروءة
+    conn = sqlite3.connect(DB_NAME)
+    c = conn.cursor()
+    c.execute("SELECT COUNT(*) FROM orders WHERE is_read = 0")
+    count = c.fetchone()[0]
+    conn.close()
+    return jsonify({'new_orders': count})
+
+@app.route('/api/mark_read', methods=['POST'])
+def mark_read():
+    conn = sqlite3.connect(DB_NAME)
+    c = conn.cursor()
+    c.execute("UPDATE orders SET is_read = 1 WHERE is_read = 0")
     conn.commit()
     conn.close()
-    return redirect(url_for("admin"))
+    return jsonify({'status': 'success'})
 
-if __name__ == "__main__":
+@app.before_first_request
+def _ensure_db():
     init_db()
-    port = int(os.getenv("PORT", "5000"))
-    host = os.getenv("HOST", "0.0.0.0")
-    debug = os.getenv("FLASK_DEBUG", "0") == "1"
-    app.run(host=host, port=port, debug=debug)
+
+if __name__ == '__main__':
+    app.run(debug=True, port=5000)
